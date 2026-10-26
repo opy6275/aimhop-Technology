@@ -171,7 +171,7 @@ export const EnquiryForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
@@ -186,28 +186,59 @@ export const EnquiryForm: React.FC = () => {
     setSubmissionNotice(null);
 
     const message = generateFormattedMessage();
-
-    if (!isConfigured) {
-      setTimeout(() => {
-        setIsSubmitting(false);
-        setSubmissionNotice(
-          "Thank you! Your project enquiry has been registered. Our technical team will reach out to your contact details shortly."
-        );
-      }, 350);
-      return;
-    }
-
     const { url } = buildWhatsAppUrl(message);
 
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/enquiry", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      setIsSubmitting(false);
+
+      if (response.ok && result.success) {
+        setSubmissionNotice(
+          "Thank you! Your enquiry has been sent to our team. Opening WhatsApp for direct instant consultation..."
+        );
+        // Clear form after successful submit
+        setFormData({
+          fullName: "",
+          phone: "",
+          email: "",
+          businessName: "",
+          serviceCategory: serviceCategories[0],
+          projectGoal: "",
+        });
+
+        if (typeof window !== "undefined" && isConfigured) {
+          setTimeout(() => {
+            window.open(url, "_blank", "noopener,noreferrer");
+          }, 600);
+        }
+      } else {
+        setSubmissionNotice(
+          "Your enquiry has been received! Opening WhatsApp to connect with our technical team..."
+        );
+        if (typeof window !== "undefined" && isConfigured) {
+          setTimeout(() => {
+            window.open(url, "_blank", "noopener,noreferrer");
+          }, 500);
+        }
+      }
+    } catch {
       setIsSubmitting(false);
       setSubmissionNotice(
-        "WhatsApp opened in a new tab with your pre-formatted brief. Please tap Send to dispatch directly to our technical team."
+        "Connecting you directly via WhatsApp for consultation..."
       );
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && isConfigured) {
         window.open(url, "_blank", "noopener,noreferrer");
       }
-    }, 400);
+    }
   };
 
   const scrollToContact = () => {
@@ -350,7 +381,7 @@ export const EnquiryForm: React.FC = () => {
                     <div className="text-[11px] font-bold text-[#5E504B] uppercase tracking-wider font-mono">
                       Official Email
                     </div>
-                    <div className="text-xs font-semibold text-[#261C19] truncate max-w-[130px]">
+                    <div className="text-xs font-semibold text-[#261C19] truncate max-w-[170px] sm:max-w-[220px]">
                       {siteConfig.contact.email}
                     </div>
                   </div>
