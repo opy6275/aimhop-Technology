@@ -65,10 +65,10 @@ export const siteConfig: SiteConfig = {
     whatsappNumber:
       process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.trim() || "919129680681",
     whatsappDisplayNumber:
-      process.env.NEXT_PUBLIC_WHATSAPP_DISPLAY?.trim() || "+91 9129680681",
+      process.env.NEXT_PUBLIC_WHATSAPP_DISPLAY?.trim() || "+91 91296 80681",
     email:
-      process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || "contact@aimhoptech.com",
-    secondaryEmail: "enquiry@aimhoptech.com",
+      process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || "aimhoptechnology@gmail.com",
+    secondaryEmail: "aimhoptechnology@gmail.com",
     location:
       process.env.NEXT_PUBLIC_LOCATION?.trim() ||
       "AIMHOP Security Solution Pvt. Ltd., Behind Ashoka Gas Godam, Singhariya, Gorakhpur - 273008, Uttar Pradesh",
