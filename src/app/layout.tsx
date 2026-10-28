@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { siteConfig } from "@/config/siteConfig";
 import { PagePreloader } from "@/components/common/PagePreloader";
 import { NetworkStatusBanner } from "@/components/common/NetworkStatusBanner";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -162,6 +163,7 @@ export default function RootLayout({
         <NetworkStatusBanner />
         <PagePreloader />
         {children}
+        <Analytics />
       </body>
     </html>
   );
