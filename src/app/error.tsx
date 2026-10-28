@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/common/Logo";
-import { siteConfig, isWhatsAppConfigured, buildWhatsAppUrl } from "@/config/siteConfig";
+import { isWhatsAppConfigured, buildWhatsAppUrl } from "@/config/siteConfig";
 import {
   AlertTriangle,
   RotateCcw,
@@ -14,24 +14,52 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-export default function Error({
+export default function ErrorPage({
   error,
+  retry,
   reset,
 }: {
-  error: Error & { digest?: string };
-  reset: () => void;
+  error: unknown;
+  retry?: () => void;
+  reset?: () => void;
 }) {
   const [showDetails, setShowDetails] = useState(false);
-  const currentYear = new Date().getFullYear();
+  const currentYear = 2026;
+
+  // Safely extract error message and digest using globalThis.Error to avoid shadowing
+  const errorMessage: string =
+    error instanceof globalThis.Error
+      ? error.message
+      : typeof error === "string"
+      ? error
+      : "An unexpected runtime error occurred.";
+
+  const errorDigest: string | undefined =
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof (error as { digest?: unknown }).digest === "string"
+      ? ((error as { digest: string }).digest)
+      : undefined;
 
   useEffect(() => {
-    // Log the error to console or error tracking service
+    // Log the error to console or monitoring service
     console.error("Runtime Application Error:", error);
   }, [error]);
 
+  const handleRetry = () => {
+    if (typeof retry === "function") {
+      retry();
+    } else if (typeof reset === "function") {
+      reset();
+    } else if (typeof window !== "undefined") {
+      window.location.reload();
+    }
+  };
+
   const isConfigured = isWhatsAppConfigured();
   const { url: supportWhatsAppUrl } = buildWhatsAppUrl(
-    `Hello AIMHOP Tech Support! I encountered an error on the website: ${error?.message || "Application Error"}`
+    `Hello AIMHOP Tech Support! I encountered an error on the website: ${errorMessage}`
   );
   const safeSupportHref = isConfigured ? supportWhatsAppUrl : "/#contact";
 
@@ -81,7 +109,7 @@ export default function Error({
             {/* Try Again Button */}
             <button
               type="button"
-              onClick={() => reset()}
+              onClick={handleRetry}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider bg-[#6B1D2F] text-white hover:bg-[#8B1E3F] shadow-lg shadow-[#6B1D2F]/25 transition-all hover:scale-[1.02] cursor-pointer"
             >
               <RotateCcw className="w-4 h-4 text-[#C8963E]" />
@@ -114,7 +142,7 @@ export default function Error({
             <button
               type="button"
               onClick={() => setShowDetails(!showDetails)}
-              className="w-full flex items-center justify-between text-xs font-mono text-[#5E504B] hover:text-[#261C19] transition-colors py-1"
+              className="w-full flex items-center justify-between text-xs font-mono text-[#5E504B] hover:text-[#261C19] transition-colors py-1 cursor-pointer"
             >
               <span>Technical Diagnostics</span>
               <ChevronDown
@@ -124,9 +152,9 @@ export default function Error({
 
             {showDetails && (
               <div className="mt-2 p-3.5 rounded-xl bg-white border border-rose-200 text-[11px] font-mono text-[#6B1D2F] space-y-1 shadow-inner animate-in fade-in duration-150">
-                <div className="font-bold">Error: {error?.message || "Unknown error"}</div>
-                {error?.digest && (
-                  <div className="text-[10px] text-[#5E504B]">Digest: {error.digest}</div>
+                <div className="font-bold">Error: {errorMessage}</div>
+                {errorDigest && (
+                  <div className="text-[10px] text-[#5E504B]">Digest: {errorDigest}</div>
                 )}
               </div>
             )}

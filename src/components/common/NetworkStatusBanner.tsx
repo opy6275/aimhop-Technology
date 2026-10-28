@@ -46,8 +46,8 @@ export const NetworkStatusBanner: React.FC = () => {
 
   const handleManualCheck = () => {
     setIsChecking(true);
-    // Quick latency / ping probe
-    fetch("/favicon.ico", { method: "HEAD", cache: "no-store" })
+    // Quick latency / ping probe against guaranteed static asset
+    fetch("/robots.txt", { method: "HEAD", cache: "no-store" })
       .then(() => {
         setIsOffline(false);
         setIsReconnected(true);

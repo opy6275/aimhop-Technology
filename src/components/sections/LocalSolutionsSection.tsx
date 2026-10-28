@@ -115,22 +115,34 @@ const LOCAL_PACKAGES: LocalPackage[] = [
 export function LocalSolutionsSection() {
   const isConfigured = isWhatsAppConfigured();
 
-  const handleBookDemo = (packageTitle: string) => {
-    // Select service in EnquiryForm and scroll down
-    if (typeof window !== "undefined") {
-      const formEl = document.getElementById("enquiry");
-      const serviceSelect = document.getElementById("service-select") as HTMLSelectElement | null;
-      if (serviceSelect) {
-        // Try to match or set requirement text
-        const reqBox = document.getElementById("project-goal-input") as HTMLTextAreaElement | null;
-        if (reqBox) {
-          reqBox.value = `Mujhe "${packageTitle}" ka live demo aur quotation chahiye.`;
-        }
-      }
-      if (formEl) {
-        formEl.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+  const handleBookDemo = (pkg: LocalPackage) => {
+    if (typeof window === "undefined") return;
+
+    let matchedService = "Request Free Live Demo (Online / On-Premise)";
+    if (pkg.id === "school-coaching") {
+      matchedService = "School & Coaching Management ERP (Purvanchal Special)";
+    } else if (pkg.id === "hospital-clinic") {
+      matchedService = "Hospital OPD & Clinic Software";
+    } else if (pkg.id === "retail-vyapar") {
+      matchedService = "Vyapar GST Billing & POS Software";
+    } else if (pkg.id === "business-website") {
+      matchedService = "Custom Website Design & Development";
     }
+
+    const contactEl = document.getElementById("contact") || document.getElementById("enquiry-form");
+    if (contactEl) {
+      contactEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("aimhop:select-project", {
+        detail: {
+          service: matchedService,
+          projectName: pkg.title,
+          categoryLabel: pkg.badge,
+        },
+      })
+    );
   };
 
   return (
@@ -224,7 +236,7 @@ export function LocalSolutionsSection() {
                   {/* Action Buttons matching site UI */}
                   <div className="pt-4 border-t border-[#E5DAC9] flex flex-col sm:flex-row items-center gap-3">
                     <button
-                      onClick={() => handleBookDemo(pkg.title)}
+                      onClick={() => handleBookDemo(pkg)}
                       className="btn-brand-orange w-full sm:flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-center flex items-center justify-center gap-1.5 shadow-sm hover:scale-[1.01] transition-transform cursor-pointer"
                     >
                       <span>Book Free Live Demo</span>

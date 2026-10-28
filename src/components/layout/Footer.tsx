@@ -17,7 +17,7 @@ import {
 
 export const Footer: React.FC = () => {
   const [legalModal, setLegalModal] = useState<"privacy" | "terms" | null>(null);
-  const currentYear = new Date().getFullYear();
+  const currentYear = 2026;
 
   const scrollToTop = () => {
     if (typeof window !== "undefined") {

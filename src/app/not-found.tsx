@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { Logo } from "@/components/common/Logo";
 import { ArrowLeft, Home, MessageSquare, Compass } from "lucide-react";
 
 export default function NotFound() {
-  const currentYear = new Date().getFullYear();
+  const currentYear = 2026;
   return (
     <div className="min-h-screen bg-[#FAF7F2] text-[#261C19] flex flex-col justify-between selection:bg-[#6B1D2F] selection:text-white">
       {/* Top minimal header */}

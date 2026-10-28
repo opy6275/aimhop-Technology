@@ -10,23 +10,123 @@ interface EnquiryPayload {
   projectGoal?: string;
 }
 
+// In-memory rate limiter: maximum 5 requests per 10 minutes per IP
+interface RateLimitRecord {
+  count: number;
+  resetTime: number;
+}
+const rateLimitMap = new Map<string, RateLimitRecord>();
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_REQUESTS_PER_WINDOW = 5;
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+
+  // Clean expired record
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+
+  if (record.count >= MAX_REQUESTS_PER_WINDOW) {
+    return true;
+  }
+
+  record.count += 1;
+  return false;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as EnquiryPayload;
+    // 1. IP Rate Limiting
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "127.0.0.1";
+
+    if (isRateLimited(clientIp)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Too many requests. Please wait a few minutes before submitting another enquiry.",
+        },
+        { status: 429 }
+      );
+    }
+
+    // 2. Safe JSON Parsing
+    let body: EnquiryPayload;
+    try {
+      body = (await request.json()) as EnquiryPayload;
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Invalid JSON body provided." },
+        { status: 400 }
+      );
+    }
 
     const { fullName, phone, email, businessName, serviceCategory, projectGoal } = body;
 
-    // Validate essential fields
-    if (!fullName || !fullName.trim()) {
+    // 3. Strict Input Validation
+    if (!fullName || typeof fullName !== "string" || !fullName.trim()) {
       return NextResponse.json(
         { success: false, error: "Client name is required." },
         { status: 400 }
       );
     }
 
-    if (!phone || !phone.trim()) {
+    if (fullName.trim().length > 100) {
       return NextResponse.json(
-        { success: false, error: "Mobile/WhatsApp number is required." },
+        { success: false, error: "Client name must not exceed 100 characters." },
+        { status: 400 }
+      );
+    }
+
+    if (!phone || typeof phone !== "string" || !phone.trim()) {
+      return NextResponse.json(
+        { success: false, error: "Mobile / WhatsApp number is required." },
+        { status: 400 }
+      );
+    }
+
+    const cleanPhone = phone.replace(/[^\d+]/g, "");
+    const cleanDigits = cleanPhone.replace(/\D/g, "");
+    if (cleanDigits.length < 8 || cleanDigits.length > 15) {
+      return NextResponse.json(
+        { success: false, error: "Please enter a valid phone number (8 to 15 digits)." },
+        { status: 400 }
+      );
+    }
+
+    if (!serviceCategory || typeof serviceCategory !== "string" || !serviceCategory.trim()) {
+      return NextResponse.json(
+        { success: false, error: "Service category selection is required." },
+        { status: 400 }
+      );
+    }
+
+    if (email && typeof email === "string" && email.trim()) {
+      if (!EMAIL_REGEX.test(email.trim())) {
+        return NextResponse.json(
+          { success: false, error: "Please enter a valid email address." },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (projectGoal && typeof projectGoal === "string" && projectGoal.length > 4000) {
+      return NextResponse.json(
+        { success: false, error: "Project details must not exceed 4000 characters." },
         { status: 400 }
       );
     }
@@ -48,8 +148,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         emailSent: false,
-        warning: "GMAIL_APP_PASSWORD not set in .env.local",
-        message: "Enquiry received successfully! (Email dispatch pending SMTP credentials configuration).",
+        message: "Enquiry received successfully! Our team will reach out via WhatsApp.",
       });
     }
 
@@ -62,13 +161,21 @@ export async function POST(request: Request) {
       },
     });
 
-    const cleanPhone = phone.replace(/[^\d+]/g, "");
     const waPhone = cleanPhone.startsWith("+") ? cleanPhone.slice(1) : cleanPhone;
     const submissionDate = new Date().toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
       dateStyle: "full",
       timeStyle: "medium",
     });
+
+    // Sanitized values for HTML email interpolation (Prevents HTML Injection / XSS)
+    const safeFullName = escapeHtml(fullName.trim());
+    const safePhone = escapeHtml(phone.trim());
+    const safeCleanPhone = escapeHtml(cleanPhone);
+    const safeEmail = email && email.trim() ? escapeHtml(email.trim()) : "";
+    const safeBusinessName = businessName && businessName.trim() ? escapeHtml(businessName.trim()) : "";
+    const safeServiceCategory = escapeHtml(serviceCategory.trim());
+    const safeProjectGoal = projectGoal && projectGoal.trim() ? escapeHtml(projectGoal.trim()) : "";
 
     // Elegant HTML Email Template for AIMhOP Technology
     const htmlContent = `
@@ -106,45 +213,45 @@ export async function POST(request: Request) {
           </div>
           <div class="content">
             <span class="alert-badge">⚡ Instant Website Enquiry</span>
-            <h2 class="title">New Lead: ${fullName}</h2>
+            <h2 class="title">New Lead: ${safeFullName}</h2>
 
             <div class="card">
               <div class="field-row">
                 <span class="label">Client Name:</span>
-                <span class="value"><strong>${fullName}</strong></span>
+                <span class="value"><strong>${safeFullName}</strong></span>
               </div>
               <div class="field-row">
                 <span class="label">Mobile Number:</span>
-                <span class="value"><a href="tel:${cleanPhone}" style="color: #0284c7; text-decoration: none;"><strong>${phone}</strong></a></span>
+                <span class="value"><a href="tel:${safeCleanPhone}" style="color: #0284c7; text-decoration: none;"><strong>${safePhone}</strong></a></span>
               </div>
               ${
-                email && email.trim()
+                safeEmail
                   ? `
               <div class="field-row">
                 <span class="label">Email Address:</span>
-                <span class="value"><a href="mailto:${email.trim()}" style="color: #0284c7; text-decoration: none;">${email.trim()}</a></span>
+                <span class="value"><a href="mailto:${safeEmail}" style="color: #0284c7; text-decoration: none;">${safeEmail}</a></span>
               </div>`
                   : ""
               }
               ${
-                businessName && businessName.trim()
+                safeBusinessName
                   ? `
               <div class="field-row">
                 <span class="label">Business / Brand:</span>
-                <span class="value">${businessName.trim()}</span>
+                <span class="value">${safeBusinessName}</span>
               </div>`
                   : ""
               }
               <div class="field-row">
                 <span class="label">Requested Service:</span>
-                <span class="value" style="color: #0284c7; font-weight: 700;">${serviceCategory}</span>
+                <span class="value" style="color: #0284c7; font-weight: 700;">${safeServiceCategory}</span>
               </div>
               ${
-                projectGoal && projectGoal.trim()
+                safeProjectGoal
                   ? `
               <div class="field-row" style="flex-direction: column; gap: 6px;">
                 <span class="label">Project Details / Message:</span>
-                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.6; color: #334155; white-space: pre-wrap;">${projectGoal.trim()}</div>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.6; color: #334155; white-space: pre-wrap;">${safeProjectGoal}</div>
               </div>`
                   : ""
               }
@@ -155,9 +262,9 @@ export async function POST(request: Request) {
             </div>
 
             <div class="actions">
-              <a href="https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${fullName}, thank you for contacting AIMhOP Technology regarding ${serviceCategory}. We are glad to assist you.`)}" class="btn btn-wa" target="_blank">Chat on WhatsApp</a>
-              <a href="tel:${cleanPhone}" class="btn btn-call">Call Client</a>
-              ${email && email.trim() ? `<a href="mailto:${email.trim()}" class="btn btn-mail">Reply via Email</a>` : ""}
+              <a href="https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${fullName.trim()}, thank you for contacting AIMhOP Technology regarding ${serviceCategory.trim()}. We are glad to assist you.`)}" class="btn btn-wa" target="_blank">Chat on WhatsApp</a>
+              <a href="tel:${safeCleanPhone}" class="btn btn-call">Call Client</a>
+              ${safeEmail ? `<a href="mailto:${safeEmail}" class="btn btn-mail">Reply via Email</a>` : ""}
             </div>
           </div>
           <div class="footer">
@@ -174,9 +281,9 @@ export async function POST(request: Request) {
       from: `"AIMhOP Website Enquiries" <${gmailUser}>`,
       to: recipientEmail,
       replyTo: email && email.trim() ? email.trim() : undefined,
-      subject: `🔥 New Lead: ${fullName} - ${serviceCategory}`,
+      subject: `🔥 New Lead: ${fullName.trim()} - ${serviceCategory.trim()}`,
       html: htmlContent,
-      text: `New Enquiry from ${fullName}\nPhone: ${phone}\nEmail: ${email || "N/A"}\nBusiness: ${businessName || "N/A"}\nService: ${serviceCategory}\nRequirements: ${projectGoal || "N/A"}\nDate: ${submissionDate}`,
+      text: `New Enquiry from ${fullName.trim()}\nPhone: ${phone.trim()}\nEmail: ${email?.trim() || "N/A"}\nBusiness: ${businessName?.trim() || "N/A"}\nService: ${serviceCategory.trim()}\nRequirements: ${projectGoal?.trim() || "N/A"}\nDate: ${submissionDate}`,
     });
 
     return NextResponse.json({
@@ -186,9 +293,8 @@ export async function POST(request: Request) {
     });
   } catch (error: unknown) {
     console.error("[AIMhOP Enquiry API Error]:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
     return NextResponse.json(
-      { success: false, error: "Failed to send email notification.", details: errorMessage },
+      { success: false, error: "Failed to process enquiry. Please try reaching out via WhatsApp." },
       { status: 500 }
     );
   }

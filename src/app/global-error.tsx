@@ -1,48 +1,128 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 
 export default function GlobalError({
   error,
+  retry,
   reset,
 }: {
-  error: Error & { digest?: string };
-  reset: () => void;
+  error: unknown;
+  retry?: () => void;
+  reset?: () => void;
 }) {
-  const currentYear = new Date().getFullYear();
+  const currentYear = 2026;
 
   useEffect(() => {
     console.error("Global Root Layout Error:", error);
   }, [error]);
 
+  const handleRetry = () => {
+    if (typeof retry === "function") {
+      retry();
+    } else if (typeof reset === "function") {
+      reset();
+    } else if (typeof window !== "undefined") {
+      window.location.reload();
+    }
+  };
+
   return (
     <html lang="en">
-      <body className="min-h-screen bg-[#FAF7F2] text-[#261C19] flex flex-col justify-between items-center p-6 font-sans">
-        <div className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto text-center space-y-6">
-          <div className="w-16 h-16 rounded-2xl bg-[#6B1D2F] text-white flex items-center justify-center shadow-lg">
-            <AlertTriangle className="w-8 h-8 text-[#C8963E]" />
+      <body
+        style={{
+          margin: 0,
+          padding: "24px",
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          alignItems: "center",
+          backgroundColor: "#FAF7F2",
+          color: "#261C19",
+          fontFamily:
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            maxWidth: "480px",
+            margin: "0 auto",
+            textAlign: "center",
+            gap: "20px",
+          }}
+        >
+          <div
+            style={{
+              width: "64px",
+              height: "64px",
+              borderRadius: "16px",
+              backgroundColor: "#6B1D2F",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 10px 25px -5px rgba(107, 29, 47, 0.3)",
+            }}
+          >
+            <AlertTriangle style={{ width: "32px", height: "32px", color: "#C8963E" }} />
           </div>
 
-          <h1 className="text-3xl font-black text-[#261C19] tracking-tight">
+          <h1
+            style={{
+              fontSize: "28px",
+              fontWeight: 900,
+              color: "#261C19",
+              margin: 0,
+              letterSpacing: "-0.5px",
+            }}
+          >
             System Interruption
           </h1>
 
-          <p className="text-sm text-[#5E504B] leading-relaxed">
-            A critical system error occurred. Our automated monitors have logged this incident. Please click below to reload the application.
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#5E504B",
+              lineHeight: 1.6,
+              margin: 0,
+            }}
+          >
+            A critical system error occurred. Our engineering monitors have logged this incident. Please click below to reload the application.
           </p>
 
           <button
             type="button"
-            onClick={() => reset()}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider bg-[#6B1D2F] text-white hover:bg-[#8B1E3F] transition-all cursor-pointer shadow-md"
+            onClick={handleRetry}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "12px 24px",
+              borderRadius: "12px",
+              fontWeight: 700,
+              fontSize: "12px",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              backgroundColor: "#6B1D2F",
+              color: "#ffffff",
+              border: "none",
+              cursor: "pointer",
+              boxShadow: "0 4px 14px rgba(107, 29, 47, 0.25)",
+            }}
           >
-            <RotateCcw className="w-4 h-4 text-[#C8963E]" />
+            <RotateCcw style={{ width: "16px", height: "16px", color: "#C8963E" }} />
             <span>Reload Application</span>
           </button>
         </div>
 
-        <footer className="py-4 text-xs text-[#5E504B]">
+        <footer style={{ padding: "16px 0", fontSize: "12px", color: "#5E504B" }}>
           &copy; {currentYear} AIMHOP Tech Solutions. All rights reserved.
         </footer>
       </body>

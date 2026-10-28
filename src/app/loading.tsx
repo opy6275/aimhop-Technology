@@ -2,7 +2,12 @@ import React from "react";
 
 export default function Loading() {
   return (
-    <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-[#FAF7F2] select-none overflow-hidden">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label="Loading AIMHOP Tech"
+      className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-[#FAF7F2] select-none overflow-hidden"
+    >
       {/* Central Big Logo Display - No text, no extra design */}
       <div className="relative flex items-center justify-center p-4">
         {/* Subtle warm ambient glow behind the logo */}
@@ -12,6 +17,8 @@ export default function Loading() {
         <img
           src="/aimhop-logo.png"
           alt="AIMHOP Logo"
+          width={288}
+          height={288}
           className="relative z-10 w-44 h-44 sm:w-60 sm:h-60 md:w-72 md:h-72 object-contain drop-shadow-2xl animate-pulse"
         />
       </div>

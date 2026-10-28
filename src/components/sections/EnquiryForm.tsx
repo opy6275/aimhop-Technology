@@ -42,7 +42,10 @@ const serviceCategories = [
   "Other IT / Tech Consultation",
 ];
 
-export const EnquiryForm: React.FC = () => {
+const PHONE_REGEX = /^\+?\d{8,15}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function EnquiryForm(): React.JSX.Element {
   const [formData, setFormData] = useState<FormData>({
     fullName: "",
     phone: "",
@@ -147,22 +150,24 @@ export const EnquiryForm: React.FC = () => {
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!formData.fullName.trim()) {
+    const trimmedName = formData.fullName.trim();
+    if (!trimmedName) {
       newErrors.fullName = "Please enter your full name.";
     }
 
-    if (!formData.phone.trim()) {
+    const trimmedPhone = formData.phone.trim();
+    if (!trimmedPhone) {
       newErrors.phone = "Please enter your mobile or WhatsApp number.";
     } else {
-      const cleanPhone = formData.phone.replace(/[\s\-\(\)]/g, "");
-      if (!/^\+?\d{8,15}$/.test(cleanPhone)) {
+      const cleanPhone = trimmedPhone.replace(/[\s\-()]/g, "");
+      if (!PHONE_REGEX.test(cleanPhone)) {
         newErrors.phone = "Please enter a valid phone number.";
       }
     }
 
-    if (formData.email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email.trim())) {
+    const trimmedEmail = formData.email.trim();
+    if (trimmedEmail) {
+      if (!EMAIL_REGEX.test(trimmedEmail)) {
         newErrors.email = "Please enter a valid email address.";
       }
     }
@@ -230,7 +235,7 @@ export const EnquiryForm: React.FC = () => {
           }, 500);
         }
       }
-    } catch {
+    } catch (_error: unknown) {
       setIsSubmitting(false);
       setSubmissionNotice(
         "Connecting you directly via WhatsApp for consultation..."
@@ -605,4 +610,4 @@ export const EnquiryForm: React.FC = () => {
       </div>
     </section>
   );
-};
+}

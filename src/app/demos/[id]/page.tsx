@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { projectsData } from "@/data/projectsData";
@@ -37,7 +37,23 @@ export async function generateMetadata({
   };
 }
 
-export default async function DemoPage({ params }: DemoPageProps) {
+function DemoSkeleton() {
+  return (
+    <div className="min-h-screen bg-white text-[#261C19] flex flex-col font-sans">
+      <header className="sticky top-0 z-40 bg-[#261C19]/95 backdrop-blur-md px-4 py-3 border-b border-white/10">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="h-8 w-32 bg-white/10 rounded-lg animate-pulse" />
+          <div className="h-8 w-24 bg-white/10 rounded-lg animate-pulse" />
+        </div>
+      </header>
+      <main className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-5xl h-[500px] bg-slate-100 rounded-3xl animate-pulse" />
+      </main>
+    </div>
+  );
+}
+
+async function DemoContent({ params }: DemoPageProps) {
   const { id } = await params;
   const project = projectsData.find((p) => p.id === id);
 
@@ -46,4 +62,12 @@ export default async function DemoPage({ params }: DemoPageProps) {
   }
 
   return <DemoViewer project={project} />;
+}
+
+export default function DemoPage({ params }: DemoPageProps) {
+  return (
+    <Suspense fallback={<DemoSkeleton />}>
+      <DemoContent params={params} />
+    </Suspense>
+  );
 }
